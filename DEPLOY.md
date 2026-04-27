@@ -24,17 +24,28 @@ implemented in `frontend/src/lib/backend-client.ts`).
 
 ## 1. One-time GCP setup
 
-Run these once per GCP project. The recommended project is
-`generative-ai-418805` (the one that owns the `kedet-ad-images` bucket and
-the `elt_meta_ads.creative_ai` BigQuery table) — but you can use any project
-as long as the service accounts have IAM on those resources.
+Cloud Run + Secret Manager + Cloud Build live in the **deploy project**
+(`kedetapplication`). The data resources stay in their original projects:
+
+- BigQuery `funnel-clients.<dataset>.funnel_*` lives in `funnel-clients`
+- BigQuery `generative-ai-418805.elt_meta_ads.creative_ai` and the
+  `kedet-ad-images` GCS bucket live in `generative-ai-418805`
+
+The Cloud Run service accounts (created in the deploy project) get
+**cross-project IAM** on the resources they need.
 
 ```bash
-PROJECT_ID=generative-ai-418805
+# Where Cloud Run, SAs, secrets, Artifact Registry live
+DEPLOY_PROJECT=kedetapplication
 REGION=us-central1
-gcloud config set project $PROJECT_ID
 
-# Enable the APIs Cloud Run + source-deploy need
+# Source-of-truth projects for data resources (unchanged)
+DATA_PROJECT=funnel-clients
+CREATIVE_PROJECT=generative-ai-418805
+
+gcloud config set project $DEPLOY_PROJECT
+
+# Enable the APIs Cloud Run + source-deploy need (in the deploy project)
 gcloud services enable \
   run.googleapis.com \
   cloudbuild.googleapis.com \
@@ -48,7 +59,8 @@ gcloud services enable \
 
 ### 1a. Service accounts (one per service)
 
-Each Cloud Run service runs as its own least-privilege SA. Create all six:
+Each Cloud Run service runs as its own least-privilege SA. Create all six
+in the deploy project:
 
 ```bash
 for s in \
@@ -60,28 +72,36 @@ for s in \
 done
 ```
 
-### 1b. IAM grants per backend SA
+### 1b. Cross-project IAM grants per backend SA
+
+The SAs live in `kedetapplication`, but they need access to BigQuery /
+GCS resources that live in **other projects**. Each binding is applied to
+the resource's owning project, not the deploy project:
 
 ```bash
-# data-ai-analyst-backend → BigQuery
+# data-ai-analyst-backend → BigQuery in funnel-clients (cross-project)
 for role in roles/bigquery.dataViewer roles/bigquery.jobUser; do
-  gcloud projects add-iam-policy-binding $PROJECT_ID \
-    --member=serviceAccount:data-ai-analyst-backend-sa@$PROJECT_ID.iam.gserviceaccount.com \
+  gcloud projects add-iam-policy-binding $DATA_PROJECT \
+    --member=serviceAccount:data-ai-analyst-backend-sa@$DEPLOY_PROJECT.iam.gserviceaccount.com \
     --role=$role
 done
 
-# creative-ai-analyst-backend → BigQuery + GCS bucket
+# creative-ai-analyst-backend → BigQuery + GCS in generative-ai-418805 (cross-project)
 for role in roles/bigquery.dataEditor roles/bigquery.jobUser; do
-  gcloud projects add-iam-policy-binding $PROJECT_ID \
-    --member=serviceAccount:creative-ai-analyst-backend-sa@$PROJECT_ID.iam.gserviceaccount.com \
+  gcloud projects add-iam-policy-binding $CREATIVE_PROJECT \
+    --member=serviceAccount:creative-ai-analyst-backend-sa@$DEPLOY_PROJECT.iam.gserviceaccount.com \
     --role=$role
 done
 gcloud storage buckets add-iam-policy-binding gs://kedet-ad-images \
-  --member=serviceAccount:creative-ai-analyst-backend-sa@$PROJECT_ID.iam.gserviceaccount.com \
+  --member=serviceAccount:creative-ai-analyst-backend-sa@$DEPLOY_PROJECT.iam.gserviceaccount.com \
   --role=roles/storage.objectAdmin
 
-# competitive-ai-backend uses no GCP-internal services; no grants needed
+# competitive-ai-backend uses no GCP-internal services — no grants needed
 ```
+
+**Note:** the `kedet-ad-images` bucket binding requires that you (or
+whoever runs this) have `storage.admin` on the bucket. If you don't, ask
+the owner of `generative-ai-418805` to run that single command for you.
 
 ### 1c. Frontend → backend invoker
 
@@ -92,7 +112,7 @@ service. (Add this **after** the backend service exists — see step 3.)
 for app in data-ai-analyst creative-ai-analyst competitive-ai; do
   gcloud run services add-iam-policy-binding $app-backend \
     --region=$REGION \
-    --member=serviceAccount:$app-frontend-sa@$PROJECT_ID.iam.gserviceaccount.com \
+    --member=serviceAccount:$app-frontend-sa@$DEPLOY_PROJECT.iam.gserviceaccount.com \
     --role=roles/run.invoker
 done
 ```
@@ -115,21 +135,21 @@ Per-secret SA grants (only the SAs that need it):
 # OPENAI_API_KEY → both AI backends
 for app in data-ai-analyst creative-ai-analyst; do
   gcloud secrets add-iam-policy-binding openai-api-key \
-    --member=serviceAccount:$app-backend-sa@$PROJECT_ID.iam.gserviceaccount.com \
+    --member=serviceAccount:$app-backend-sa@$DEPLOY_PROJECT.iam.gserviceaccount.com \
     --role=roles/secretmanager.secretAccessor
 done
 
 # Gemini + Meta → creative-ai-analyst-backend only
 for s in gemini-api-key fb-access-token; do
   gcloud secrets add-iam-policy-binding $s \
-    --member=serviceAccount:creative-ai-analyst-backend-sa@$PROJECT_ID.iam.gserviceaccount.com \
+    --member=serviceAccount:creative-ai-analyst-backend-sa@$DEPLOY_PROJECT.iam.gserviceaccount.com \
     --role=roles/secretmanager.secretAccessor
 done
 
 # SpyFu + SerpAPI + Meta → competitive-ai-backend
 for s in spyfu-api-key serpapi-key fb-access-token; do
   gcloud secrets add-iam-policy-binding $s \
-    --member=serviceAccount:competitive-ai-backend-sa@$PROJECT_ID.iam.gserviceaccount.com \
+    --member=serviceAccount:competitive-ai-backend-sa@$DEPLOY_PROJECT.iam.gserviceaccount.com \
     --role=roles/secretmanager.secretAccessor
 done
 ```
