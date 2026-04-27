@@ -93,6 +93,31 @@ def _enrich_metrics(rows: list[dict[str, Any]], objective: str) -> None:
             row["ROAS"] = round(_safe_div(action_value, spend) * 100, 2)
             row["CPA"] = round(_safe_div(spend, action_purchase), 2)
             row["total_revenue"] = action_value
+    elif objective == "OUTCOME_TRAFFIC":
+        for row in rows:
+            impressions = row.get("impressions") or 0
+            clicks = row.get("clicks") or 0
+            row["Impressions"] = impressions
+            row["Clicks"] = clicks
+            row["CTR"] = round(_safe_div(clicks, impressions), 2)
+    elif objective == "OUTCOME_LEADS":
+        for row in rows:
+            spend = row.get("spend") or 0
+            # `action_purchase` is the count of conversion actions on the row;
+            # in the standalone schema we don't have a dedicated leads column,
+            # so we use it as the closest proxy (matches original behaviour
+            # where the same numeric drove leads ranking when leads were the
+            # only configured action).
+            conversions = row.get("action_purchase") or 0
+            row["Conversions"] = conversions
+            row["CPA"] = round(_safe_div(spend, conversions), 2)
+    elif objective == "OUTCOME_AWARENESS":
+        for row in rows:
+            row["Impressions"] = row.get("impressions") or 0
+            # video_views isn't in the elt_meta_ads.creative_ai schema; pass
+            # through if a future ETL adds it, otherwise default to 0 so the
+            # ranking just becomes a no-op for this metric.
+            row["video_views"] = row.get("video_views") or 0
 
 
 def _rank(
@@ -204,9 +229,11 @@ async def generate_ai_ads(
         "- Return ONLY a valid JSON array of objects, with no surrounding text or markdown."
     )
 
+    from src.config import settings
+
     openai = get_openai_client()
     completion = await openai.chat.completions.create(
-        model="gpt-4o",
+        model=settings.openai_chat_model,
         messages=[{"role": "user", "content": prompt}],
         temperature=0.7,
         response_format={"type": "json_object"},
@@ -248,8 +275,33 @@ async def generate_ai_ads(
 
 
 # ===========================================================================
-# Image generation/editing — gpt-image-1
+# Image generation/editing — gpt-image-2 (configurable via OPENAI_IMAGE_MODEL)
 # ===========================================================================
+
+
+def _normalize_image_url(url: str) -> str:
+    """
+    Coerce common image URL shapes to a fetchable HTTPS URL.
+
+    - `gs://bucket/object` → `https://storage.googleapis.com/bucket/object`
+    - bare bucket-relative path (`kedet-ad-images/foo.png`) → public GCS URL
+    - protocol-relative (`//host/path`) → assume https
+    """
+    if not url or not isinstance(url, str):
+        raise ValueError("Empty image URL")
+    stripped = url.strip()
+    if stripped.startswith("gs://"):
+        return "https://storage.googleapis.com/" + stripped[len("gs://"):]
+    if stripped.startswith("//"):
+        return "https:" + stripped
+    if stripped.startswith(("http://", "https://")):
+        return stripped
+    # Bare bucket-relative path produced by older ETL rows.
+    if stripped.startswith("kedet-ad-images/"):
+        return f"https://storage.googleapis.com/{stripped}"
+    raise ValueError(
+        f"Unsupported image URL (no http/https/gs scheme): {stripped[:120]}"
+    )
 
 
 async def _download_image_bytes(
@@ -260,6 +312,8 @@ async def _download_image_bytes(
     download. For Facebook CDN URLs, mimics the original axios call with
     curl-like headers. Otherwise plain GET.
     """
+    url = _normalize_image_url(url)
+
     if GCS_PUBLIC_HOST in url:
         parts = url.split(f"{GCS_PUBLIC_HOST}/")
         if len(parts) > 1:
@@ -322,8 +376,10 @@ async def _openai_image_edit(
     api_key: str,
 ) -> str:
     """POST to OpenAI's /v1/images/edits, return the base64 image string."""
+    from src.config import settings
+
     files = {"image": (image_filename, image_bytes, image_content_type)}
-    data = {"prompt": prompt, "model": "gpt-image-1", "size": size}
+    data = {"prompt": prompt, "model": settings.openai_image_model, "size": size}
     async with httpx.AsyncClient(timeout=180) as client:
         resp = await client.post(
             OPENAI_IMAGE_EDITS_URL,
@@ -565,7 +621,7 @@ async def edit_image(
 
 
 # ===========================================================================
-# Audit (image with GPT-4o vision, video with Gemini)
+# Audit (image with GPT-5.4 vision via OPENAI_CHAT_MODEL, video with Gemini)
 # ===========================================================================
 
 
@@ -624,6 +680,8 @@ async def audit_creative(
     if not image_urls and not video_urls:
         raise ValueError("An array of image URLs or video URLs is required")
 
+    from src.config import settings
+
     openai = get_openai_client()
     results: list[dict[str, Any]] = []
 
@@ -645,7 +703,7 @@ async def audit_creative(
                 user_prompt += f" Additional context: {prompt}"
 
             completion = await openai.chat.completions.create(
-                model="gpt-4o",
+                model=settings.openai_chat_model,
                 messages=[
                     {"role": "system", "content": _AUDIT_SYSTEM_PROMPT},
                     {
@@ -719,7 +777,7 @@ async def audit_creative(
 
 
 # ===========================================================================
-# Compare two images (GPT-4o vision)
+# Compare two images (GPT-5.4 vision via OPENAI_CHAT_MODEL)
 # ===========================================================================
 
 
@@ -746,6 +804,8 @@ async def compare_creatives(
     if not image_urls or len(image_urls) != 2:
         raise ValueError("Exactly two image URLs are required for comparison")
 
+    from src.config import settings
+
     openai = get_openai_client()
     results: list[dict[str, Any]] = []
 
@@ -771,7 +831,7 @@ async def compare_creatives(
             user_prompt += f" Additional context: {prompt}"
 
         completion = await openai.chat.completions.create(
-            model="gpt-4o",
+            model=settings.openai_chat_model,
             messages=[
                 {"role": "system", "content": _COMPARE_SYSTEM_PROMPT},
                 {

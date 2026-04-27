@@ -1,7 +1,8 @@
 # Creative AI Analyst
 
 AI-powered ad creative tooling. Generate, analyse, and audit Meta ad creatives —
-GPT-4 for copy, gpt-image-1 for image variants, Gemini for vision-based critique.
+GPT-5.4 for copy and vision, gpt-image-2 for image variants, Gemini for video critique.
+Model names live behind `OPENAI_CHAT_MODEL` / `OPENAI_IMAGE_MODEL` env vars (see `.env.example`).
 
 ## Architecture
 
@@ -9,7 +10,7 @@ GPT-4 for copy, gpt-image-1 for image variants, Gemini for vision-based critique
 |---|---|
 | Backend | FastAPI (Python 3.12) — `/backend` |
 | Frontend | Next.js 15 + TypeScript + Tailwind 4 — `/frontend` |
-| LLMs | OpenAI GPT-4 (copy), gpt-image-1 (image edit), Gemini 2.0 Flash (vision) |
+| LLMs | OpenAI GPT-5.4-mini (copy + vision), gpt-image-2 (image edit), Gemini 2.0 Flash (video) |
 | Data | BigQuery (`elt_meta_ads.creative_ai`), Google Cloud Storage (image artifacts) |
 | External | Meta Graph API v21 (ad previews, account/campaign metadata) |
 | Deploy | 2 Cloud Run services per app, GitHub-triggered Cloud Build |

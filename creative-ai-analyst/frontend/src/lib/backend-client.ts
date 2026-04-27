@@ -2,7 +2,11 @@ import type {
   Ad,
   AdPreviewsResponse,
   AdsResponse,
+  AuditResponse,
+  CompareResponse,
   GenerateAiAdsResponse,
+  ImageOpResponse,
+  ProcessPromptResponse,
 } from '@/lib/types';
 
 const BACKEND_URL = process.env.BACKEND_URL ?? 'http://localhost:8000';
@@ -80,6 +84,95 @@ export async function generateAiAds(payload: {
     '/creative-ai/generate-ai-ads',
     payload,
   );
+}
+
+export async function auditCreatives(payload: {
+  imageUrls: string[];
+  videoUrls?: string[];
+  prompt?: string;
+  adIds?: string[];
+}): Promise<AuditResponse> {
+  return await proxyPost<AuditResponse>('/creative-ai/audit', {
+    imageUrls: payload.imageUrls,
+    videoUrls: payload.videoUrls ?? [],
+    prompt: payload.prompt,
+    adIds: payload.adIds,
+  });
+}
+
+export async function compareCreatives(payload: {
+  imageUrls: string[];
+  prompt?: string;
+}): Promise<CompareResponse> {
+  return await proxyPost<CompareResponse>('/creative-ai/compare', payload);
+}
+
+export async function generateVariant(payload: {
+  imageUrls: string[];
+  prompt?: string;
+  accountName: string;
+  adId?: string;
+}): Promise<ImageOpResponse> {
+  return await proxyPost<ImageOpResponse>(
+    '/creative-ai/generate-variant',
+    payload,
+  );
+}
+
+export async function editImage(payload: {
+  imageUrls: string[];
+  prompt: string;
+  accountName: string;
+  adId?: string;
+}): Promise<ImageOpResponse> {
+  return await proxyPost<ImageOpResponse>('/creative-ai/edit-image', payload);
+}
+
+export async function processPrompt(payload: {
+  prompt: string;
+  imageUrls?: string[];
+  videoUrls?: string[];
+  accountName?: string;
+  adId?: string;
+}): Promise<ProcessPromptResponse> {
+  return await proxyPost<ProcessPromptResponse>(
+    '/creative-ai/process-prompt',
+    {
+      prompt: payload.prompt,
+      imageUrls: payload.imageUrls ?? [],
+      videoUrls: payload.videoUrls ?? [],
+      accountName: payload.accountName,
+      adId: payload.adId,
+    },
+  );
+}
+
+export async function proxyAdImage(
+  imageUrl: string,
+): Promise<{ bytes: ArrayBuffer; contentType: string }> {
+  const headers = await getServiceToServiceAuthHeaders(BACKEND_URL);
+  const url = new URL(`${BACKEND_URL}/creative-ai/image-proxy`);
+  url.searchParams.set('url', imageUrl);
+  const res = await fetch(url, { cache: 'no-store', headers });
+  if (!res.ok) throw new Error(await readErrorMessage(res));
+  return {
+    bytes: await res.arrayBuffer(),
+    contentType: res.headers.get('content-type') ?? 'image/jpeg',
+  };
+}
+
+export async function downloadImagesZip(
+  imageUrls: string[],
+): Promise<ArrayBuffer> {
+  const headers = await getServiceToServiceAuthHeaders(BACKEND_URL);
+  const res = await fetch(`${BACKEND_URL}/creative-ai/download-images`, {
+    method: 'POST',
+    cache: 'no-store',
+    headers: { ...headers, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ imageUrls }),
+  });
+  if (!res.ok) throw new Error(await readErrorMessage(res));
+  return await res.arrayBuffer();
 }
 
 // ---------- internals ----------

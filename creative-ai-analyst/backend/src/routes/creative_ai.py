@@ -5,6 +5,7 @@ from fastapi.responses import Response
 from pydantic import BaseModel, ConfigDict
 
 from src.services.creative_ai_service import (
+    _download_image_bytes,
     audit_creative,
     build_zip_of_images,
     compare_creatives,
@@ -150,7 +151,7 @@ async def generate_ai_ads_route(
     return GenerateAiAdsResponse(ai_ads=ai_ads)
 
 
-# ---------- generate variant (gpt-image-1) ----------
+# ---------- generate variant (gpt-image-2) ----------
 
 
 class GenerateVariantRequest(BaseModel):
@@ -179,7 +180,7 @@ async def generate_variant_route(
     return {"results": results}
 
 
-# ---------- edit image (gpt-image-1) ----------
+# ---------- edit image (gpt-image-2) ----------
 
 
 class EditImageRequest(BaseModel):
@@ -208,7 +209,7 @@ async def edit_image_route(
     return {"results": results}
 
 
-# ---------- audit (GPT-4o for images, Gemini for video) ----------
+# ---------- audit (GPT-5.4 for images, Gemini for video) ----------
 
 
 class AuditRequest(BaseModel):
@@ -361,4 +362,28 @@ async def download_images_route(request: DownloadImagesRequest) -> Response:
         headers={
             "Content-Disposition": "attachment; filename=ad_preview_images.zip"
         },
+    )
+
+
+# ---------- image proxy (browser-friendly fetch for GCS / fbcdn URLs) ----------
+
+
+@router.get("/image-proxy")
+async def image_proxy(url: str = Query(..., min_length=1)) -> Response:
+    """
+    Proxy an ad-creative image so the frontend can render it without the
+    browser needing public GCS read access or the fbcdn referer/IP allowlist.
+    Reuses the same download path used by audit/variant/edit.
+    """
+    try:
+        image_bytes, content_type = await _download_image_bytes(url, timeout=30.0)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+    return Response(
+        content=image_bytes,
+        media_type=content_type or "image/jpeg",
+        headers={"Cache-Control": "private, max-age=600"},
     )

@@ -29,5 +29,12 @@ class Settings(BaseSettings):
     gemini_api_key: str = ""
     fb_access_token: str = ""
 
+    # OpenAI model selection. Override in .env to roll back if a model is
+    # deprecated or behaves differently. As of April 2026:
+    #   - chat/vision: gpt-5.4-mini (gpt-4o was retired April 3, 2026)
+    #   - image edit:  gpt-image-2 (released April 21, 2026)
+    openai_chat_model: str = "gpt-5.4-mini"
+    openai_image_model: str = "gpt-image-2"
+
 
 settings = Settings()
