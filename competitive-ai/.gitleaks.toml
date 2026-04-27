@@ -1,0 +1,25 @@
+title = "data-ai-analyst gitleaks config"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "gcp-service-account-json"
+description = "GCP service account key JSON"
+regex = '''"type":\s*"service_account"'''
+tags = ["gcp", "credentials"]
+
+[[rules]]
+id = "gcp-private-key-pem"
+description = "GCP private key PEM block"
+regex = '''-----BEGIN PRIVATE KEY-----'''
+tags = ["gcp", "credentials"]
+
+[allowlist]
+description = "Files we know are safe"
+paths = [
+  '''\.env\.example$''',
+  '''\.env\.local\.example$''',
+  '''README\.md$''',
+  '''decisions\.md$''',
+]
