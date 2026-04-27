@@ -48,27 +48,19 @@ export default function QueryPanel() {
 
   return (
     <div className="space-y-6">
-      {(result || errorMessage) && (
-        <section className="rounded-lg border border-zinc-200 bg-white p-5 shadow-sm fade-in max-h-[60vh] overflow-y-auto">
-          {errorMessage && (
-            <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800">
-              {errorMessage}
-            </div>
-          )}
-          {result && <ResultsView data={result} />}
-        </section>
-      )}
-
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
+      <form
+        onSubmit={handleSubmit(onSubmit)}
+        className="rounded-2xl border border-[var(--color-cream-200)] bg-white p-6 shadow-sm"
+      >
         <label className="block">
-          <span className="block text-sm font-medium text-zinc-700">
+          <span className="block text-sm font-medium text-[var(--color-ink-700)]">
             Type your campaign-related question below, and our AI Analyst will
             query the data to provide insights just like a Senior Analyst would.
           </span>
           <input
             type="text"
             placeholder="e.g. What are the top 5 products with the highest conversion rate in the last month?"
-            className="mt-2 block w-full rounded-md border border-zinc-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="mt-3 block w-full rounded-full border border-[var(--color-cream-200)] bg-[var(--color-cream-50)] px-5 py-3 text-sm text-[var(--color-ink-900)] placeholder:text-[var(--color-ink-500)] focus:border-[var(--color-accent-blue)] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-blue)]/30"
             disabled={isSubmitting}
             {...register('userQuestion', {
               required: 'Question is required',
@@ -76,7 +68,7 @@ export default function QueryPanel() {
             })}
           />
           {errors.userQuestion && (
-            <span className="mt-1 block text-xs text-red-600">
+            <span className="mt-2 block text-xs text-[var(--color-accent-red)]">
               {errors.userQuestion.message}
             </span>
           )}
@@ -85,7 +77,7 @@ export default function QueryPanel() {
         <button
           type="submit"
           disabled={isSubmitting}
-          className="inline-flex items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+          className="mt-4 inline-flex items-center justify-center rounded-full bg-[var(--color-coral-400)] px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[var(--color-coral-500)] disabled:cursor-not-allowed disabled:opacity-60"
         >
           {isSubmitting ? (
             <>
@@ -116,6 +108,17 @@ export default function QueryPanel() {
           )}
         </button>
       </form>
+
+      {(result || errorMessage) && (
+        <section className="rounded-2xl border border-[var(--color-cream-200)] bg-white p-6 shadow-sm fade-in">
+          {errorMessage && (
+            <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+              {errorMessage}
+            </div>
+          )}
+          {result && <ResultsView data={result} />}
+        </section>
+      )}
     </div>
   );
 }

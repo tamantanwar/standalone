@@ -34,5 +34,12 @@ Thumbs.db
 .vscode/
 *.swp
 
+# Build artifacts
+tsconfig.tsbuildinfo
+next-env.d.ts
+
+# Local Claude Code state
+.claude/
+
 # Logs
 *.log
