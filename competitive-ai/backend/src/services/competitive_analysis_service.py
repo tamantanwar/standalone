@@ -136,7 +136,27 @@ async def fetch_facebook_ad_creatives(
         "ad_reached_countries": country_code,
         "search_terms": domain,
         "access_token": settings.fb_access_token,
-        "fields": "id,ad_creative_bodies,ad_creative_link_titles,ad_delivery_start_time,ad_delivery_stop_time,page_id,page_name",
+        "fields": ",".join(
+            [
+                "id",
+                "ad_creative_bodies",
+                "ad_creative_link_titles",
+                "ad_creative_link_descriptions",
+                "ad_creative_link_captions",
+                "ad_snapshot_url",
+                "ad_delivery_start_time",
+                "ad_delivery_stop_time",
+                "page_id",
+                "page_name",
+                "publisher_platforms",
+                "languages",
+                "bylines",
+                "currency",
+                "impressions",
+                "spend",
+                "estimated_audience_size",
+            ]
+        ),
     }
 
     async with httpx.AsyncClient(timeout=60) as client:

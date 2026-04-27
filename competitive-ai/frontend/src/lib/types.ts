@@ -35,6 +35,11 @@ export type GoogleAdCreative = {
   [key: string]: unknown;
 };
 
+export type MetaRange = {
+  lower_bound?: string;
+  upper_bound?: string;
+};
+
 export type FacebookAdCreative = {
   id: string;
   ad_creative_id?: string;
@@ -42,8 +47,18 @@ export type FacebookAdCreative = {
   page_name?: string;
   ad_creative_bodies?: string[];
   ad_creative_link_titles?: string[];
+  ad_creative_link_descriptions?: string[];
+  ad_creative_link_captions?: string[];
+  ad_snapshot_url?: string;
   ad_delivery_start_time?: string;
   ad_delivery_stop_time?: string;
+  publisher_platforms?: string[];
+  languages?: string[];
+  bylines?: string;
+  currency?: string;
+  impressions?: MetaRange;
+  spend?: MetaRange;
+  estimated_audience_size?: MetaRange;
   [key: string]: unknown;
 };
 
