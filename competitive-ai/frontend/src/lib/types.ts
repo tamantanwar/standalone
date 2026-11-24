@@ -59,11 +59,28 @@ export type FacebookAdCreative = {
   impressions?: MetaRange;
   spend?: MetaRange;
   estimated_audience_size?: MetaRange;
+  /** 'page' = competitor's own Facebook page; 'keyword' = text match (may be other advertisers). */
+  match_type?: 'page' | 'keyword';
+  [key: string]: unknown;
+};
+
+export type LinkedInAdCreative = {
+  id: string;
+  ad_type?: string;
+  advertiser?: { name?: string; thumbnail?: string };
+  content?: { headline?: string; image?: string; cta?: string };
+  link?: string;
+  /** 'page' = the competitor's own LinkedIn page; 'keyword' = related advertiser. */
+  match_type?: 'page' | 'keyword';
   [key: string]: unknown;
 };
 
 export type AdCreativesResponse =
   | { adCreatives: GoogleAdCreative[]; adSource?: 'Google' }
-  | { adCreatives: FacebookAdCreative[]; adSource?: 'Facebook' };
+  | { adCreatives: FacebookAdCreative[]; adSource?: 'Facebook' }
+  | { adCreatives: LinkedInAdCreative[]; adSource?: 'LinkedIn' };
 
-export type AdSource = 'Google' | 'Facebook';
+export type AdSource = 'Google' | 'Facebook' | 'LinkedIn';
+
+/** Facebook only: ads running now, or running now plus past ads. */
+export type AdStatus = 'ACTIVE' | 'ALL';

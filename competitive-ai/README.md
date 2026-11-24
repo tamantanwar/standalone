@@ -23,9 +23,11 @@ See [`decisions.md`](./decisions.md) for the full architectural rationale.
 ## Local development
 
 Prereqs: Docker, gcloud CLI authenticated (`gcloud auth application-default login`).
+API keys left blank are loaded at startup from Secret Manager in `GCP_PROJECT_ID`
+(default `kedetapplication`; secrets `spyfu-api-key`, `serpapi-key`, `fb-access-token`).
 
 ```bash
-cd competitive-ai
+cd standalone/competitive-ai
 docker compose up --build
 ```
 

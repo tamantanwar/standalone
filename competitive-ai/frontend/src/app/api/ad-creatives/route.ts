@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
 import { getAdCreatives } from '@/lib/backend-client';
-import type { AdSource } from '@/lib/types';
+import type { AdSource, AdStatus } from '@/lib/types';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -12,6 +12,7 @@ export async function GET(req: Request) {
   const domain = searchParams.get('domain');
   const adSource = searchParams.get('adSource');
   const countryCode = searchParams.get('countryCode') ?? undefined;
+  const adStatus = searchParams.get('adStatus') ?? 'ALL';
 
   if (!domain || !adSource) {
     return NextResponse.json(
@@ -20,9 +21,16 @@ export async function GET(req: Request) {
     );
   }
 
-  if (adSource !== 'Google' && adSource !== 'Facebook') {
+  if (adSource !== 'Google' && adSource !== 'Facebook' && adSource !== 'LinkedIn') {
     return NextResponse.json(
-      { error: 'adSource must be Google or Facebook' },
+      { error: 'adSource must be Google, Facebook or LinkedIn' },
+      { status: 400 },
+    );
+  }
+
+  if (adStatus !== 'ACTIVE' && adStatus !== 'ALL') {
+    return NextResponse.json(
+      { error: 'adStatus must be ACTIVE or ALL' },
       { status: 400 },
     );
   }
@@ -39,6 +47,7 @@ export async function GET(req: Request) {
       domain,
       adSource: adSource as AdSource,
       countryCode,
+      adStatus: adStatus as AdStatus,
     });
     return NextResponse.json(data);
   } catch (err) {

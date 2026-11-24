@@ -1,6 +1,7 @@
 import type {
   AdCreativesResponse,
   AdSource,
+  AdStatus,
   CompetitorsResponse,
 } from '@/lib/types';
 
@@ -60,6 +61,7 @@ export async function getAdCreatives(params: {
   domain: string;
   adSource: AdSource;
   countryCode?: string;
+  adStatus?: AdStatus;
 }): Promise<AdCreativesResponse> {
   const headers = await getServiceToServiceAuthHeaders(BACKEND_URL);
   const url = new URL(`${BACKEND_URL}/competitive-analysis/adCreatives`);
@@ -67,6 +69,9 @@ export async function getAdCreatives(params: {
   url.searchParams.set('adSource', params.adSource);
   if (params.countryCode) {
     url.searchParams.set('countryCode', params.countryCode);
+  }
+  if (params.adStatus) {
+    url.searchParams.set('adStatus', params.adStatus);
   }
 
   const res = await fetch(url, { headers, cache: 'no-store' });

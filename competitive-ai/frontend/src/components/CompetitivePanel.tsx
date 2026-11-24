@@ -6,6 +6,7 @@ import { useForm } from 'react-hook-form';
 import type {
   AdCreativesResponse,
   AdSource,
+  AdStatus,
   Competitor,
   CompetitorsResponse,
   DomainStat,
@@ -53,6 +54,7 @@ export default function CompetitivePanel() {
 
   const [selectedDomain, setSelectedDomain] = useState<string>('');
   const [adSource, setAdSource] = useState<AdSource>('Google');
+  const [adStatus, setAdStatus] = useState<AdStatus>('ALL');
   const [adCreatives, setAdCreatives] = useState<AdCreativesResponse | null>(
     null,
   );
@@ -113,8 +115,11 @@ export default function CompetitivePanel() {
         domain: selectedDomain,
         adSource,
       });
-      if (adSource === 'Facebook' && searchedCountry) {
+      if (adSource !== 'Google' && searchedCountry) {
         params.set('countryCode', searchedCountry);
+      }
+      if (adSource === 'Facebook') {
+        params.set('adStatus', adStatus);
       }
       const res = await fetch(`/api/ad-creatives?${params.toString()}`);
       if (!res.ok) {
@@ -241,7 +246,7 @@ export default function CompetitivePanel() {
       {isSubmittingCompetitors && (
         <LoadingCard
           title="Pulling Competitor Intelligence"
-          subtitle="Querying SpyFu for PPC competitors and per-domain stats…"
+          subtitle="Identifying paid-search competitors and analyzing their performance…"
         />
       )}
 
@@ -253,8 +258,8 @@ export default function CompetitivePanel() {
               No competitors found
             </h3>
             <p className="mx-auto mt-2 max-w-xl text-sm text-[var(--color-ink-700)]">
-              SpyFu returned no PPC competitors for that domain in the
-              selected country. Try a broader country (US/CA usually have the
+              We couldn&apos;t find paid-search competitors for that domain in
+              the selected country. Try a broader country (US/CA usually have the
               richest data) or check the domain spelling.
             </p>
           </section>
@@ -306,7 +311,7 @@ export default function CompetitivePanel() {
                 <div>
                   <span className={LABEL_CLASS}>Ad Source</span>
                   <div className="mt-1 inline-flex rounded-full border border-[var(--color-cream-200)] bg-white p-1">
-                    {(['Google', 'Facebook'] as const).map((src) => (
+                    {(['Google', 'Facebook', 'LinkedIn'] as const).map((src) => (
                       <button
                         key={src}
                         type="button"
@@ -322,6 +327,34 @@ export default function CompetitivePanel() {
                     ))}
                   </div>
                 </div>
+
+                {adSource === 'Facebook' && (
+                  <div>
+                    <span className={LABEL_CLASS}>Ad Status</span>
+                    <div className="mt-1 inline-flex rounded-full border border-[var(--color-cream-200)] bg-white p-1">
+                      {(
+                        [
+                          { value: 'ALL', label: 'Active + Past' },
+                          { value: 'ACTIVE', label: 'Active Only' },
+                        ] as const
+                      ).map((opt) => (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          onClick={() => setAdStatus(opt.value)}
+                          aria-pressed={adStatus === opt.value}
+                          className={`rounded-full px-4 py-1 text-sm font-medium transition ${
+                            adStatus === opt.value
+                              ? 'bg-[var(--color-coral-400)] text-white'
+                              : 'text-[var(--color-ink-700)] hover:bg-[var(--color-cream-100)]'
+                          }`}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               <button
@@ -342,8 +375,8 @@ export default function CompetitivePanel() {
           title={`Fetching ${adSource} Ad Creatives`}
           subtitle={
             adSource === 'Google'
-              ? 'Querying SerpAPI Google Ads Transparency Center…'
-              : 'Querying Meta /ads_archive for matching ads…'
+              ? 'Collecting Google ads for this competitor…'
+              : `Collecting ${adSource} ads for this competitor…`
           }
         />
       )}

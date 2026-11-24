@@ -154,16 +154,11 @@ export default function FacebookAdPreviewModal({ ad, onClose }: Props) {
             {ad.bylines && <Stat label="Bylines" value={ad.bylines} />}
           </section>
 
-          {/* Snapshot link (Meta blocks iframe embedding via X-Frame-Options,
-              so render as a prominent link instead). */}
+          {/* Facebook blocks iframe embedding (X-Frame-Options), so link out. */}
           {snapshotUrl && (
             <section className="rounded-xl border border-[var(--color-cream-200)] bg-white p-4 text-sm">
               <p className="text-[var(--color-ink-700)]">
-                Meta provides a hosted preview of this ad — but{' '}
-                <code className="rounded bg-[var(--color-cream-100)] px-1.5 py-0.5 text-xs">
-                  X-Frame-Options
-                </code>{' '}
-                prevents embedding it inline.
+                View this ad as it appears on Facebook.
               </p>
               <a
                 href={snapshotUrl}
@@ -171,7 +166,7 @@ export default function FacebookAdPreviewModal({ ad, onClose }: Props) {
                 rel="noopener noreferrer"
                 className="mt-2 inline-block rounded-full border border-[var(--color-coral-400)] px-3 py-1 text-xs font-semibold text-[var(--color-coral-500)] hover:bg-[var(--color-cream-100)]"
               >
-                Open Meta snapshot ↗
+                Open ad preview ↗
               </a>
             </section>
           )}

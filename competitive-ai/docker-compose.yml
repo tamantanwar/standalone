@@ -9,8 +9,12 @@ services:
       ENVIRONMENT: development
       CORS_ORIGINS: '["http://localhost:3000"]'
       GOOGLE_APPLICATION_CREDENTIALS: /gcp/adc.json
-      GCP_PROJECT_ID: ${GCP_PROJECT_ID:-funnel-clients}
-      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      # Keys left blank are fetched from Secret Manager in this project via ADC
+      GCP_PROJECT_ID: ${GCP_PROJECT_ID:-kedetapplication}
+      SPYFU_API_KEY: ${SPYFU_API_KEY:-}
+      SERPAPI_KEY: ${SERPAPI_KEY:-}
+      FB_ACCESS_TOKEN: ${FB_ACCESS_TOKEN:-}
+      SEARCH_API_KEY: ${SEARCH_API_KEY:-}
     volumes:
       - ./backend/src:/app/src:ro
       - ${HOME}/.config/gcloud/application_default_credentials.json:/gcp/adc.json:ro
@@ -26,7 +30,7 @@ services:
     environment:
       NODE_ENV: development
       BACKEND_URL: http://backend:8080
-      NEXT_PUBLIC_APP_NAME: "Data AI Analyst"
+      NEXT_PUBLIC_APP_NAME: "Competitive AI"
     volumes:
       - ./frontend/src:/app/src:ro
       - ./frontend/public:/app/public:ro

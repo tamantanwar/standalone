@@ -29,9 +29,9 @@ monorepo with three deploy targets is unbounded if boundaries leak.
 - Flask: simpler, but async support is bolt-on; needs extensions for everything
   FastAPI does natively.
 - Django: ORM-heavy framework optimized for traditional CRUD apps; overkill for
-  services that mostly proxy to BigQuery and OpenAI.
+  services that mostly proxy to third-party APIs.
 
-**Reason:** Native async (critical for streaming OpenAI responses), Pydantic-based
+**Reason:** Native async (concurrent fan-out to SpyFu / SerpAPI / Meta), Pydantic-based
 request/response validation that doubles as auto-generated OpenAPI docs, zero
 boilerplate for typed endpoints, first-class support for dependency injection.
 Matches the AI-engineering job market's expected stack.
@@ -50,8 +50,7 @@ Matches the AI-engineering job market's expected stack.
 
 **Reason:** The user is the warroom **sales team demoing to prospects** — visual polish
 is part of the perceived product quality. Server components let data-fetching and
-secrets-handling stay server-side without exposing keys to the browser. App Router's
-streaming RSC pattern matches LLM token-streaming naturally.
+secrets-handling stay server-side without exposing keys to the browser.
 
 ---
 
@@ -67,7 +66,7 @@ streaming RSC pattern matches LLM token-streaming naturally.
 
 **Reason:** Service boundaries match language and concern boundaries. Each service
 has its own SA, its own IAM, its own scaling characteristics, its own deploy
-pipeline. Backend can be scaled independently when AI calls get heavy. Backend is
+pipeline. Backend can be scaled independently of the frontend. Backend is
 non-public — only the frontend SA can invoke it (see D-006). Defense in depth.
 
 ---
@@ -115,8 +114,7 @@ code in the backend.
 
 ## D-007 — Google Secret Manager for all secrets
 
-**Choice:** OpenAI API key, BigQuery dataset names, and any third-party API keys
-live in Secret Manager. Each Cloud Run service's SA is granted
+**Choice:** Third-party API keys (SpyFu, SerpAPI, Meta) live in Secret Manager. Each Cloud Run service's SA is granted
 `roles/secretmanager.secretAccessor` on **only the secrets it needs**, not
 project-wide.
 

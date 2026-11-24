@@ -4,9 +4,10 @@ from fastapi import APIRouter, HTTPException, Query
 
 from src.services.competitive_analysis_service import (
     CompetitiveAnalysisError,
-    fetch_domain_stats,
+    fetch_competitor_stats,
     fetch_facebook_ad_creatives,
     fetch_google_ad_creatives,
+    fetch_linkedin_ad_creatives,
     fetch_ppc_competitors,
 )
 
@@ -24,21 +25,10 @@ async def get_competitors(
     except CompetitiveAnalysisError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
-    stats_data: list[dict[str, Any]] = []
-    for comp in competitors:
-        comp_domain = comp.get("domain")
-        if not comp_domain:
-            continue
-        try:
-            comp_data = await fetch_domain_stats(
-                comp_domain, countryCode, timePeriod
-            )
-        except CompetitiveAnalysisError as exc:
-            raise HTTPException(status_code=502, detail=str(exc)) from exc
-
-        for month_data in comp_data:
-            month_data["domain"] = comp_domain
-        stats_data.extend(comp_data)
+    try:
+        stats_data = await fetch_competitor_stats(competitors, countryCode, timePeriod)
+    except CompetitiveAnalysisError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
 
     return {"competitors": competitors, "statsData": stats_data}
 
@@ -46,19 +36,22 @@ async def get_competitors(
 @router.get("/adCreatives")
 async def get_ad_creatives(
     domain: str = Query(..., min_length=1),
-    adSource: str = Query(..., pattern="^(Google|Facebook)$"),  # noqa: N803
+    adSource: str = Query(..., pattern="^(Google|Facebook|LinkedIn)$"),  # noqa: N803
     countryCode: str | None = Query(None),  # noqa: N803
+    adStatus: str = Query("ALL", pattern="^(ACTIVE|ALL)$"),  # noqa: N803
 ) -> dict[str, list[dict[str, Any]]]:
     try:
         if adSource == "Google":
             creatives = await fetch_google_ad_creatives(domain)
+        elif adSource == "LinkedIn":
+            creatives = await fetch_linkedin_ad_creatives(domain, countryCode)
         else:
             if not countryCode:
                 raise HTTPException(
                     status_code=400,
                     detail="countryCode is required for Facebook ads",
                 )
-            creatives = await fetch_facebook_ad_creatives(domain, countryCode)
+            creatives = await fetch_facebook_ad_creatives(domain, countryCode, adStatus)
     except CompetitiveAnalysisError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 

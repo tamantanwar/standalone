@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -5,10 +7,14 @@ from pydantic import BaseModel
 from src.config import settings
 from src.routes import competitive_analysis
 
+# httpx logs full request URLs at INFO, and our upstream APIs take keys as query
+# params. Keep it at WARNING so keys never reach Cloud Logging.
+logging.getLogger("httpx").setLevel(logging.WARNING)
+
 app = FastAPI(
     title="Competitive AI",
     version="0.1.0",
-    description="Competitor intelligence aggregation across SpyFu, SerpAPI, and Meta Ads Library.",
+    description="Kedet competitive analysis service.",
 )
 
 app.add_middleware(

@@ -12,7 +12,7 @@ no separate `cloudbuild.yaml` to maintain.
 | `data-ai-analyst-frontend` | `data-ai-analyst/frontend` | ❌ | Next.js, IAM-gated |
 | `creative-ai-analyst-backend` | `creative-ai-analyst/backend` | ❌ | FastAPI, BigQuery, GCS, OpenAI, Gemini, Meta |
 | `creative-ai-analyst-frontend` | `creative-ai-analyst/frontend` | ❌ | Next.js, IAM-gated |
-| `competitive-ai-backend` | `competitive-ai/backend` | ❌ | FastAPI, SpyFu, SerpAPI, Meta |
+| `competitive-ai-backend` | `competitive-ai/backend` | ❌ | FastAPI, SpyFu, SerpAPI, Meta, SearchAPI |
 | `competitive-ai-frontend` | `competitive-ai/frontend` | ❌ | Next.js, IAM-gated |
 
 `--no-allow-unauthenticated` everywhere. Frontends are reached by users via
@@ -146,8 +146,8 @@ for s in gemini-api-key fb-access-token; do
     --role=roles/secretmanager.secretAccessor
 done
 
-# SpyFu + SerpAPI + Meta → competitive-ai-backend
-for s in spyfu-api-key serpapi-key fb-access-token; do
+# SpyFu + SerpAPI + Meta + SearchAPI (LinkedIn, FB page lookup) → competitive-ai-backend
+for s in spyfu-api-key serpapi-key fb-access-token searchapi-key; do
   gcloud secrets add-iam-policy-binding $s \
     --member=serviceAccount:competitive-ai-backend-sa@$DEPLOY_PROJECT.iam.gserviceaccount.com \
     --role=roles/secretmanager.secretAccessor
@@ -245,7 +245,7 @@ invoker bindings).
 | Timeout | 300s |
 | Service account | `competitive-ai-backend-sa` |
 | Env vars | `ENVIRONMENT=production` |
-| Secrets | `SPYFU_API_KEY` ← `spyfu-api-key:latest`, `SERPAPI_KEY` ← `serpapi-key:latest`, `FB_ACCESS_TOKEN` ← `fb-access-token:latest` |
+| Secrets | `SPYFU_API_KEY` ← `spyfu-api-key:latest`, `SERPAPI_KEY` ← `serpapi-key:latest`, `FB_ACCESS_TOKEN` ← `fb-access-token:latest`, `SEARCHAPI_KEY` ← `searchapi-key:latest` |
 
 ### competitive-ai-frontend
 
